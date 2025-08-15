@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Hellow</title>
+<style>
+    body {
+        background: #ffdde1;
+        overflow: hidden;
+        margin: 0;
+    }
+    canvas {
+        display: block;
+    }
+    #startBtn {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 15px 25px;
+        font-size: 20px;
+        background: #ff4d6d;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        display: none;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    #startBtn:hover {
+        background: #e84362;
+    }
+    #bucinText {
+        position: absolute;
+        top: 210px;
+        width: 100%;
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: pink;
+        text-shadow: 0 0 10px rgba(255,255,255,0.8);
+    }
+</style>
+</head>
+<body>
+
+<audio id="loveSong" src="musik.mp3"></audio>
+<canvas id="bucinCanvas"></canvas>
+<button id="startBtn">Coba Klik Dehh</button>
+<div id="bucinText"></div>
+
+<script>
+const canvas = document.getElementById('bucinCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*()';
+let particles = [];
+let forming = false;
+let points = [];
+let bouquetComplete = false;
+
+const img = new Image();
+img.src = 'buket-pixel.png';
+
+// Ambil titik dari gambar pixel
+function generatePointsFromImage() {
+    const tempCanvas = document.createElement('canvas');
+    const tctx = tempCanvas.getContext('2d');
+
+    tempCanvas.width = img.width;
+    tempCanvas.height = img.height;
+    tctx.drawImage(img, 0, 0);
+
+    const imageData = tctx.getImageData(0, 0, img.width, img.height).data;
+    points = [];
+
+    const scale = Math.min(canvas.width / (img.width * 2), canvas.height / (img.height * 2));
+
+    for (let y = 0; y < img.height; y++) {
+        for (let x = 0; x < img.width; x++) {
+            const idx = (y * img.width + x) * 4;
+            const r = imageData[idx];
+            const g = imageData[idx + 1];
+            const b = imageData[idx + 2];
+            const a = imageData[idx + 3];
+            if (a > 128) {
+                points.push({
+                    x: canvas.width / 2 + (x - img.width / 2) * scale,
+                    y: canvas.height / 2 + (y - img.height / 2) * scale,
+                    color: `rgb(${r},${g},${b})`
+                });
+            }
+        }
+    }
+}
+
+// Kelas partikel huruf
+class Particle {
+    constructor() {
+        this.reset();
+        this.target = null;
+        this.color = '#d63384';
+    }
+    reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.char = chars[Math.floor(Math.random() * chars.length)];
+    }
+    draw() {
+        ctx.fillStyle = forming && this.target ? this.target.color : this.color;
+        ctx.font = `${Math.max(10, canvas.width / 100)}px monospace`;
+        ctx.fillText(this.char, this.x, this.y);
+    }
+    update() {
+        if (forming && this.target) {
+            this.x += (this.target.x - this.x) * 0.05;
+            this.y += (this.target.y - this.y) * 0.05;
+        } else {
+            this.x += (Math.random() - 0.5) * 2;
+            this.y += (Math.random() - 0.5) * 2;
+        }
+    }
+}
+
+// Buat partikel awal
+function initParticles() {
+    particles = [];
+    for (let i = 0; i < points.length; i++) {
+        const p = new Particle();
+        p.target = points[i];
+        particles.push(p);
+    }
+}
+
+// Fungsi efek mengetik
+function typeWriter(text, elementId, speed = 80) {
+    let i = 0;
+    const element = document.getElementById(elementId);
+    element.innerHTML = "";
+    const typing = setInterval(() => {
+        if (i < text.length) {
+            element.innerHTML += text.charAt(i);
+            i++;
+        } else {
+            clearInterval(typing);
+        }
+    }, speed);
+}
+
+// Animasi
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+        p.update();
+        p.draw();
+    });
+
+    // Deteksi jika semua partikel sudah dekat target → anggap buket selesai
+    if (forming && !bouquetComplete) {
+        const done = particles.every(p => Math.abs(p.x - p.target.x) < 1 && Math.abs(p.y - p.target.y) < 1);
+        if (done) {
+            bouquetComplete = true;
+            setTimeout(() => {
+                typeWriter("Kamuu tauu ndaaa pendek, kamu tu indaaa buangget kaya bunga iki >_<", "bucinText", 60);
+            }, 500);
+        }
+    }
+
+    requestAnimationFrame(animate);
+}
+
+img.onload = () => {
+    generatePointsFromImage();
+    initParticles();
+    animate();
+
+    setTimeout(() => {
+        document.getElementById("startBtn").style.display = "block";
+    }, 2000);
+};
+
+document.getElementById("startBtn").addEventListener("click", () => {
+    forming = true;
+    document.getElementById("loveSong").play();
+    document.getElementById("startBtn").style.display = "none";
+});
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    generatePointsFromImage();
+    initParticles();
+});
+</script>
+</body>
+</html>
+
+
